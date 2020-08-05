@@ -51,7 +51,24 @@ cluster_list = get_clusters(2, bbat)
 
 print(cluster_list)
 
+def get_property_type(property):
+    property_type = struct.unpack('<B',property[66: 66 + 1])[0]
+    if property_type == 1:
+        return 'storage'
+    elif property_type == 2:
+        return 'stream'
+    elif property_type == 5:
+        return 'root'
 
+def get_starting_block_of_property(property):
+    start_block_of_property = struct.unpack('<I', property[116 : 120])[0]
+    return start_block_of_property
 
+def get_size_of_property(property):
+    size_of_property = struct.unpack('<I', property[120:124])[0]
+    return size_of_property # 만약 0x1000보다 크면 BBAT, 작다면 SBAT
+
+test = hexdump.Dump(ole.ReadBlock(fp, 5), 0x100, 0x80)
+print(get_property_type(test), get_starting_block_of_property(test), get_size_of_property(test))
 
 fp.close()

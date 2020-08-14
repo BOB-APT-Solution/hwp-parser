@@ -3,12 +3,9 @@ import hexdump
 import sys
 import struct
 import about_property
-"""
-if len(sys.argv) != 4:
-    print('input value error!')
-    exit()
-"""
-fp = open('macro1.hwp', 'rb')
+import zlib
+
+fp = open(sys.argv[1], 'rb')
 
 
 #Buffer = ole.ReadBlock(fp, int(sys.argv[1]))
@@ -43,10 +40,15 @@ def get_all_block(entry_list):
 
     return blocks
 
-def get_all_small_block():
-    return 0
+def get_all_small_block(small_blocks, entry_list):
+    blocks = b""
+    for idx in entry_list:
+        blocks += small_blocks[idx * 0x40: (idx + 1) * 0x40]
 
-def get_entry_list(bat, start_entry) :
+    return blocks
+
+
+def get_entry_list(bat, start_entry) : # 일반적인 entry list를 얻을 때 사용
     cluster = start_entry
     cluster_list = [cluster]
     while True:
@@ -58,9 +60,7 @@ def get_entry_list(bat, start_entry) :
         cluster_list.append(cluster)
     return cluster_list
 
-#cluster_list = get_cluster_list(2, bbat) ## bbat에서 클러스터 리스트 얻기
-
-def get_all_property(bbat, start_entry_of_property):
+def get_all_property(bbat, start_entry_of_property): # property에 관한 entry list와 blocks을 얻을 수 있음
     property_entry_list = get_entry_list(bbat, start_entry_of_property)
     property_blocks = get_all_block(property_entry_list)
     print("property_entry_list:", property_entry_list)
@@ -97,25 +97,34 @@ header = get_header_info()
 print_info(header)
 bbat = get_all_block(header['array_bbat'])
 entry_list = get_entry_list(bbat, header['start_entry_of_property'])
+sbat_entry_list = get_entry_list(bbat, header['start_cluster_of_sbat'])
+
+sbat = get_all_block(sbat_entry_list)
+
 
 property_data = get_all_property(bbat, header['start_entry_of_property'])
 
-for i in range(13):
-    property_jscript_info = get_property_info(property_data, i)
-    print(property_jscript_info)    
+# property info
+property_jscript_info = get_property_info(property_data, 10)
+property_root_info = get_property_info(property_data, 0)
+
+# 'js_list' JScript small block list
+js_list = get_entry_list(sbat, property_jscript_info['start_block']) # sbat entry list
+
+
+small_data_block_list = get_entry_list(bbat, property_root_info['start_block'])
+#print(small_data_block_list) Big block
+
+small_data_blocks = get_all_block(small_data_block_list)
+
+data = get_all_small_block(small_data_blocks, js_list)[:property_jscript_info['size']]
+# 스크립트 코드
+decompressed_data = zlib.decompress(data, -15)
+print("========================= JavaScript ===============================")
+print(decompressed_data.decode('utf-16'))
+
 
 """
-def get_sbat(start_cluster_of_sbat, number_sbat_depot):
-    global bbat
-    cluster_list = get_clusters(start_cluster_of_sbat, bbat)
-    print("cluster_list:", cluster_list)
-    return
-
-print_info()
-get_sbat(start_cluster_of_sbat, number_sbat_depot)
-
-
-
 
 data[:filesize] 이런식으로 처리하면 클러스터 크기 만큼이 아닌 정확한 크기만큼 가져올 수 있다.
 

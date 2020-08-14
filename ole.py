@@ -12,3 +12,4 @@ def ReadBlock(fp, block_num) :
         pass
 
     return block_buf # 읽은 내용을 리턴한다.
+

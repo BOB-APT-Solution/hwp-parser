@@ -95,39 +95,37 @@ def get_property_info(property_blocks, index):
 
 header = get_header_info()
 print_info(header)
-bbat = get_all_block(header['array_bbat'])
-entry_list = get_entry_list(bbat, header['start_entry_of_property'])
-sbat_entry_list = get_entry_list(bbat, header['start_cluster_of_sbat'])
 
-sbat = get_all_block(sbat_entry_list)
+bbat = get_all_block(header['array_bbat']) # bbat 데이터
+#entry_list = get_entry_list(bbat, header['start_entry_of_property']) # 프로퍼티 entry(클러스터) 리스트 get_all_property 안에서 동작
+sbat_entry_list = get_entry_list(bbat, header['start_cluster_of_sbat']) # sbat entry 리스트
 
+sbat = get_all_block(sbat_entry_list) # sbat 데이터
 
-property_data = get_all_property(bbat, header['start_entry_of_property'])
+property_data = get_all_property(bbat, header['start_entry_of_property']) # property data
 
 # property info
 property_jscript_info = get_property_info(property_data, 10)
-property_root_info = get_property_info(property_data, 0)
+print("JScript property info:",property_jscript_info)
 
-# 'js_list' JScript small block list
-js_list = get_entry_list(sbat, property_jscript_info['start_block']) # sbat entry list
+if property_jscript_info['size'] > 4096:
+    big_data = get_all_block(get_entry_list(bbat, property_jscript_info['start_block']))[:property_jscript_info['size']]
+    decompressed_data = zlib.decompress(big_data, -15)
+else:
+    property_root_info = get_property_info(property_data, 0)
+    js_sbat_entry_list = get_entry_list(sbat, property_jscript_info['start_block']) # sbat entry list
+    small_data_block_list = get_entry_list(bbat, property_root_info['start_block'])
+    small_data_blocks = get_all_block(small_data_block_list)
+    data = get_all_small_block(small_data_blocks, js_sbat_entry_list)[:property_jscript_info['size']]
+    decompressed_data = zlib.decompress(data, -15)
 
-
-small_data_block_list = get_entry_list(bbat, property_root_info['start_block'])
-#print(small_data_block_list) Big block
-
-small_data_blocks = get_all_block(small_data_block_list)
-
-data = get_all_small_block(small_data_blocks, js_list)[:property_jscript_info['size']]
-# 스크립트 코드
-decompressed_data = zlib.decompress(data, -15)
 print("========================= JavaScript ===============================")
 print(decompressed_data.decode('utf-16'))
 
+fp.close()
 
 """
 
 data[:filesize] 이런식으로 처리하면 클러스터 크기 만큼이 아닌 정확한 크기만큼 가져올 수 있다.
 
 """
-
-fp.close()

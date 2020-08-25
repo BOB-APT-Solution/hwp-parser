@@ -120,7 +120,14 @@ else:
     decompressed_data = zlib.decompress(data, -15)
 
 print("========================= JavaScript ===============================")
-print(decompressed_data.decode('utf-16'))
+
+result_script = decompressed_data.decode('utf-16')
+
+import os
+print(result_script)
+result_path = os.path.join(os.path.abspath(sys.argv[1]), os.path.pardir, f"{sys.argv[1].split('.')[0]}.js")
+with open(result_path, 'w') as result:
+    result.write(result_script)
 
 fp.close()
 
